@@ -10,6 +10,8 @@ services:
     command: ["bash", "-lc", "sleep infinity"]
     depends_on:
       - postgres
+    ports:
+      - "8080:8080"
 
   postgres:
     image: postgres:16
