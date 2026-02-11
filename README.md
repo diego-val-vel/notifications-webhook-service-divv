@@ -8,7 +8,7 @@ Senior Software Engineer technical challenge: **event notification delivery via 
 
 Watch the full end-to-end demo here:
 
-https://video-link
+https://drive.google.com/file/d/1K9_xSfTr9w4yXXT0h46OFt76oehtGVPE/view?usp=sharing
 
 ---
 
