@@ -5,18 +5,16 @@ import io.notifications.webhook.domain.model.NotificationEvent;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /*
- * NotificationEventRestMapper is responsible for transforming domain
- * NotificationEvent aggregates into REST response DTOs.
+ * NotificationEventRestMapper is responsible for transforming domain NotificationEvent aggregates
+ * into REST response DTOs.
  *
- * This mapper guarantees strict separation between the domain model and
- * the transport layer, preventing domain leakage into the API contract.
+ * It keeps the REST contract isolated from domain internals and provides a stable mapping layer.
  */
 public final class NotificationEventRestMapper {
 
-    private NotificationEventRestMapper() {
+    public NotificationEventRestMapper() {
     }
 
     public static NotificationEventResponse toResponse(NotificationEvent event) {
@@ -37,6 +35,6 @@ public final class NotificationEventRestMapper {
 
         return events.stream()
                 .map(NotificationEventRestMapper::toResponse)
-                .collect(Collectors.toUnmodifiableList());
+                .toList();
     }
 }

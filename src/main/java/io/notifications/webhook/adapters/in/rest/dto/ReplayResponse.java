@@ -4,11 +4,9 @@ import java.time.Instant;
 import java.util.Objects;
 
 /*
- * ReplayResponse is a REST response DTO returned by the replay endpoint.
- *
- * It provides a minimal and explicit response contract indicating whether the replay
- * request was accepted and when it was processed from the API perspective.
- * This object is a pure transport model and contains no domain logic.
+ * ReplayResponse is a REST response DTO that represents the outcome of a replay request.
+ * It preserves the existing controller contract by exposing accepted(...) and rejected(...)
+ * factory methods, while also providing JavaBeans getters for reliable Jackson serialization.
  */
 public final class ReplayResponse {
 
@@ -45,6 +43,18 @@ public final class ReplayResponse {
     }
 
     public Instant processedAt() {
+        return processedAt;
+    }
+
+    public String getNotificationEventId() {
+        return notificationEventId;
+    }
+
+    public boolean isAccepted() {
+        return accepted;
+    }
+
+    public Instant getProcessedAt() {
         return processedAt;
     }
 

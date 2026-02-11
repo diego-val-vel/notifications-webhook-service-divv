@@ -33,7 +33,7 @@ public final class NotificationEventJsonMapper {
                 eventId,
                 clientId,
                 eventType,
-                dto.content(),
+                dto.content().toString(),
                 deliveryDate,
                 deliveryStatus
         );

@@ -1,18 +1,23 @@
 package io.notifications.webhook.adapters.out.json.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
+import java.util.Objects;
 
 /*
- * NotificationEventsSnapshotDto represents the root structure of the JSON snapshot file.
- * It mirrors the external dataset contract and contains the list of notification events.
- * This class is purely a transport structure used for deserialization purposes.
+ * NotificationEventsSnapshotDto represents the top-level JSON snapshot structure.
+ * It is designed for Jackson deserialization and keeps the JSON contract isolated from the domain model.
  */
 public final class NotificationEventsSnapshotDto {
 
+    @JsonProperty("events")
     private final List<NotificationEventDto> events;
 
-    public NotificationEventsSnapshotDto(List<NotificationEventDto> events) {
-        this.events = events;
+    @JsonCreator
+    public NotificationEventsSnapshotDto(@JsonProperty("events") List<NotificationEventDto> events) {
+        this.events = Objects.requireNonNull(events, "events must not be null");
     }
 
     public List<NotificationEventDto> events() {

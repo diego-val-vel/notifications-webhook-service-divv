@@ -97,6 +97,30 @@ public final class NotificationEventResponse {
         return clientId;
     }
 
+    public String getEventId() {
+        return eventId;
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public Instant getDeliveryDate() {
+        return deliveryDate;
+    }
+
+    public String getDeliveryStatus() {
+        return deliveryStatus;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

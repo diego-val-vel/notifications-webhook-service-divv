@@ -10,7 +10,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
 
 management:
   endpoints:
@@ -18,10 +18,16 @@ management:
       exposure:
         include: health,info,metrics,prometheus
   endpoint:
+    prometheus:
+      enabled: true
     health:
       probes:
         enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 app:
   webhook:
-    base-url: ${WEBHOOK_BASE_URL:https://example.invalid/webhook}
+    sender: ${WEBHOOK_SENDER:http}
+    target-url: ${WEBHOOK_TARGET_URL:https://webhook.site/REPLACE_ME}
