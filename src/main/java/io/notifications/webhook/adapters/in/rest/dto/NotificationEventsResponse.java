@@ -29,6 +29,10 @@ public final class NotificationEventsResponse {
         return events;
     }
 
+    public List<NotificationEventResponse> getEvents() {
+        return events;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

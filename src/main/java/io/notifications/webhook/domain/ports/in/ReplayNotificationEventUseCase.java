@@ -8,9 +8,15 @@ import java.util.Objects;
 import java.util.Optional;
 
 /*
- * ReplayNotificationEventUseCase exposes a domain-facing operation to request a replay delivery for an event.
- * ClientId is required to enforce tenant isolation. The result includes whether the replay was accepted and
- * (optionally) a timestamp representing when the replay was requested.
+ * ReplayNotificationEventUseCase exposes the domain operation to request a replay delivery for an event.
+ * ClientId is required to enforce tenant isolation.
+ *
+ * This use case supports minimal idempotency via an optional idempotency key:
+ * - When present, the key is used as a correlation id for a replay attempt.
+ * - Implementations may return an existing attempt result without re-sending the webhook.
+ *
+ * The Result indicates whether the replay was accepted. requestedAt is optional to allow implementations
+ * to either provide a domain clock timestamp or delegate it to the caller when appropriate.
  */
 public interface ReplayNotificationEventUseCase {
 
@@ -20,10 +26,12 @@ public interface ReplayNotificationEventUseCase {
 
         private final ClientId clientId;
         private final NotificationEventId notificationEventId;
+        private final Optional<String> idempotencyKey;
 
-        public Command(ClientId clientId, NotificationEventId notificationEventId) {
+        public Command(ClientId clientId, NotificationEventId notificationEventId, Optional<String> idempotencyKey) {
             this.clientId = Objects.requireNonNull(clientId, "clientId must not be null");
             this.notificationEventId = Objects.requireNonNull(notificationEventId, "notificationEventId must not be null");
+            this.idempotencyKey = Objects.requireNonNull(idempotencyKey, "idempotencyKey must not be null");
         }
 
         public ClientId clientId() {
@@ -32,6 +40,10 @@ public interface ReplayNotificationEventUseCase {
 
         public NotificationEventId notificationEventId() {
             return notificationEventId;
+        }
+
+        public Optional<String> idempotencyKey() {
+            return idempotencyKey;
         }
     }
 
@@ -49,8 +61,8 @@ public interface ReplayNotificationEventUseCase {
             return new Result(true, Optional.ofNullable(requestedAt));
         }
 
-        public static Result rejected() {
-            return new Result(false, Optional.empty());
+        public static Result rejected(Instant requestedAt) {
+            return new Result(false, Optional.ofNullable(requestedAt));
         }
 
         public boolean accepted() {

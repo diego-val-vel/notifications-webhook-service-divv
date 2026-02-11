@@ -12,6 +12,8 @@ services:
       - postgres
     ports:
       - "8080:8080"
+    environment:
+      WEBHOOK_TARGET_URL: ${WEBHOOK_TARGET_URL:-https://webhook.site/REPLACE_ME}
 
   postgres:
     image: postgres:16

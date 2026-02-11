@@ -9,11 +9,17 @@ import java.util.Optional;
 
 /*
  * WebhookSender is an outbound port responsible for delivering notification events via HTTPS webhooks.
- * It returns a DeliveryResult describing the outcome without leaking HTTP client details into the domain.
+ *
+ * This port supports optional idempotency correlation for replay deliveries. The default implementation
+ * ignores correlationId to preserve backward compatibility with existing senders.
  */
 public interface WebhookSender {
 
     DeliveryResult send(ClientId clientId, NotificationEvent notificationEvent);
+
+    default DeliveryResult send(ClientId clientId, NotificationEvent notificationEvent, Optional<String> correlationId) {
+        return send(clientId, notificationEvent);
+    }
 
     final class DeliveryResult {
 
@@ -38,8 +44,8 @@ public interface WebhookSender {
             return new DeliveryResult(true, Optional.of(httpStatus), Optional.empty(), occurredAt);
         }
 
-        public static DeliveryResult failure(Integer httpStatus, String errorMessage, Instant occurredAt) {
-            return new DeliveryResult(false, Optional.ofNullable(httpStatus), Optional.ofNullable(errorMessage), occurredAt);
+        public static DeliveryResult failure(Optional<Integer> httpStatus, String errorMessage, Instant occurredAt) {
+            return new DeliveryResult(false, httpStatus, Optional.ofNullable(errorMessage), occurredAt);
         }
 
         public boolean delivered() {

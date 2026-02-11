@@ -1,11 +1,14 @@
 package io.notifications.webhook.adapters.out.json.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import tools.jackson.databind.JsonNode;
+
+import java.util.Objects;
 
 /*
- * NotificationEventDto represents a single notification event entry
- * inside the external JSON snapshot file.
- * It mirrors the dataset structure and contains no domain logic.
+ * NotificationEventDto represents a single notification event as defined in the JSON snapshot.
+ * It is a Jackson-friendly DTO that preserves the snapshot contract and is later mapped into domain objects.
  */
 public final class NotificationEventDto {
 
@@ -16,7 +19,7 @@ public final class NotificationEventDto {
     private final String eventType;
 
     @JsonProperty("content")
-    private final String content;
+    private final JsonNode content;
 
     @JsonProperty("delivery_date")
     private final String deliveryDate;
@@ -27,20 +30,21 @@ public final class NotificationEventDto {
     @JsonProperty("client_id")
     private final String clientId;
 
+    @JsonCreator
     public NotificationEventDto(
-            String eventId,
-            String eventType,
-            String content,
-            String deliveryDate,
-            String deliveryStatus,
-            String clientId
+            @JsonProperty("event_id") String eventId,
+            @JsonProperty("event_type") String eventType,
+            @JsonProperty("content") JsonNode content,
+            @JsonProperty("delivery_date") String deliveryDate,
+            @JsonProperty("delivery_status") String deliveryStatus,
+            @JsonProperty("client_id") String clientId
     ) {
-        this.eventId = eventId;
-        this.eventType = eventType;
-        this.content = content;
-        this.deliveryDate = deliveryDate;
-        this.deliveryStatus = deliveryStatus;
-        this.clientId = clientId;
+        this.eventId = Objects.requireNonNull(eventId, "eventId must not be null");
+        this.eventType = Objects.requireNonNull(eventType, "eventType must not be null");
+        this.content = Objects.requireNonNull(content, "content must not be null");
+        this.deliveryDate = Objects.requireNonNull(deliveryDate, "deliveryDate must not be null");
+        this.deliveryStatus = Objects.requireNonNull(deliveryStatus, "deliveryStatus must not be null");
+        this.clientId = Objects.requireNonNull(clientId, "clientId must not be null");
     }
 
     public String eventId() {
@@ -51,7 +55,7 @@ public final class NotificationEventDto {
         return eventType;
     }
 
-    public String content() {
+    public JsonNode content() {
         return content;
     }
 

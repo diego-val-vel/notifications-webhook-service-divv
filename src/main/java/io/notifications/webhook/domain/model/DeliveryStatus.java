@@ -1,13 +1,13 @@
 package io.notifications.webhook.domain.model;
 
 /*
- * DeliveryStatus represents the lifecycle state of a notification delivery.
- * It models business semantics instead of raw persistence values and defines
- * which states allow replay attempts.
+ * DeliveryStatus represents the delivery outcome state of a notification event within the scope of the challenge.
+ * Only COMPLETED and FAILED are supported, matching the immutable JSON dataset contract.
+ *
+ * The enum also defines whether a status allows replay attempts.
  */
 public enum DeliveryStatus {
 
-    PENDING(false),
     COMPLETED(false),
     FAILED(true);
 
@@ -22,6 +22,6 @@ public enum DeliveryStatus {
     }
 
     public boolean isFinalState() {
-        return this == COMPLETED || this == FAILED;
+        return true;
     }
 }
