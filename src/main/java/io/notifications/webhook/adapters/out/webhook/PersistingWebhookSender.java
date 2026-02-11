@@ -1,11 +1,16 @@
 package io.notifications.webhook.adapters.out.webhook;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.notifications.webhook.domain.model.ClientId;
 import io.notifications.webhook.domain.model.DeliveryAttempt;
 import io.notifications.webhook.domain.model.DeliveryAttemptResult;
 import io.notifications.webhook.domain.model.NotificationEvent;
 import io.notifications.webhook.domain.ports.out.DeliveryAttemptRepository;
 import io.notifications.webhook.domain.ports.out.WebhookSender;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -15,14 +20,17 @@ import java.util.UUID;
 /*
  * PersistingWebhookSender decorates another WebhookSender and records delivery attempt metadata in Postgres.
  *
- * This decorator also supports minimal idempotency correlation for replay deliveries:
+ * It emits structured logs per delivery attempt and records Micrometer metrics:
+ * - webhook_delivery_attempts_total{result=success|failure}
+ * - webhook_delivery_latency_seconds
+ *
+ * Minimal idempotency correlation for replay deliveries is supported:
  * - If a correlation id (Idempotency-Key) is provided, it is persisted as correlation_id.
  * - If absent, a random UUID correlation id is generated.
- *
- * This keeps persistence concerns out of the replay use case while ensuring that each replay delivery
- * produces a delivery_attempts row with SUCCESS/FAILURE, timing, HTTP status, and correlation id.
  */
 public final class PersistingWebhookSender implements WebhookSender {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PersistingWebhookSender.class);
 
     private static final int MAX_CORRELATION_ID_LENGTH = 200;
 
@@ -30,10 +38,15 @@ public final class PersistingWebhookSender implements WebhookSender {
     private final DeliveryAttemptRepository deliveryAttemptRepository;
     private final String targetUrl;
 
+    private final Counter deliverySuccessCounter;
+    private final Counter deliveryFailureCounter;
+    private final Timer deliveryLatencyTimer;
+
     public PersistingWebhookSender(
             WebhookSender delegate,
             DeliveryAttemptRepository deliveryAttemptRepository,
-            String targetUrl
+            String targetUrl,
+            MeterRegistry meterRegistry
     ) {
         this.delegate = Objects.requireNonNull(delegate, "delegate must not be null");
         this.deliveryAttemptRepository = Objects.requireNonNull(deliveryAttemptRepository, "deliveryAttemptRepository must not be null");
@@ -42,6 +55,16 @@ public final class PersistingWebhookSender implements WebhookSender {
             throw new IllegalArgumentException("targetUrl must not be blank");
         }
         this.targetUrl = targetUrl;
+
+        MeterRegistry registry = Objects.requireNonNull(meterRegistry, "meterRegistry must not be null");
+        this.deliverySuccessCounter = Counter.builder("webhook_delivery_attempts_total")
+                .tag("result", "success")
+                .register(registry);
+        this.deliveryFailureCounter = Counter.builder("webhook_delivery_attempts_total")
+                .tag("result", "failure")
+                .register(registry);
+        this.deliveryLatencyTimer = Timer.builder("webhook_delivery_latency_seconds")
+                .register(registry);
     }
 
     @Override
@@ -60,12 +83,25 @@ public final class PersistingWebhookSender implements WebhookSender {
                 .orElseGet(() -> UUID.randomUUID().toString());
 
         long startedAtNs = System.nanoTime();
-        DeliveryResult result = delegate.send(clientId, notificationEvent);
+        DeliveryResult result;
+        try {
+            result = delegate.send(clientId, notificationEvent);
+        } finally {
+            long elapsedNs = System.nanoTime() - startedAtNs;
+            this.deliveryLatencyTimer.record(elapsedNs, java.util.concurrent.TimeUnit.NANOSECONDS);
+        }
+
         long durationMs = (System.nanoTime() - startedAtNs) / 1_000_000L;
 
         DeliveryAttemptResult attemptResult = result.delivered()
                 ? DeliveryAttemptResult.SUCCESS
                 : DeliveryAttemptResult.FAILURE;
+
+        if (attemptResult == DeliveryAttemptResult.SUCCESS) {
+            this.deliverySuccessCounter.increment();
+        } else {
+            this.deliveryFailureCounter.increment();
+        }
 
         Instant attemptedAt = result.occurredAt();
 
@@ -85,6 +121,21 @@ public final class PersistingWebhookSender implements WebhookSender {
         );
 
         deliveryAttemptRepository.save(attempt);
+
+        String httpStatusValue = httpStatus.map(String::valueOf).orElse("null");
+        String eventTypeValue = notificationEvent.eventType() == null ? "null" : notificationEvent.eventType().toString();
+
+        LOG.info(
+                "webhook_delivery_attempt event_id={} client_id={} event_type={} result={} http_status={} duration_ms={} target_url={} correlation_id={}",
+                notificationEvent.id(),
+                clientId,
+                eventTypeValue,
+                attemptResult,
+                httpStatusValue,
+                durationMs,
+                targetUrl,
+                effectiveCorrelationId
+        );
 
         return result;
     }

@@ -1,5 +1,6 @@
 package io.notifications.webhook.adapters.out.webhook;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.notifications.webhook.domain.ports.out.DeliveryAttemptRepository;
 import io.notifications.webhook.domain.ports.out.WebhookSender;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +13,7 @@ import org.springframework.context.annotation.Primary;
  * WebhookSenderConfiguration provides the outbound WebhookSender port implementation.
  *
  * Runtime default is a real HTTP sender that delivers notification events to the configured HTTPS target URL.
- * A persisting decorator records delivery attempt metadata in Postgres for each delivery.
+ * A persisting decorator records delivery attempt metadata in Postgres for each delivery, and emits metrics/logs.
  *
  * A No-Op implementation can be enabled explicitly via configuration for local runs or tests.
  */
@@ -24,10 +25,11 @@ public final class WebhookSenderConfiguration {
     @ConditionalOnProperty(name = "app.webhook.sender", havingValue = "http", matchIfMissing = true)
     public WebhookSender httpWebhookSender(
             @Value("${app.webhook.target-url}") String targetUrl,
-            DeliveryAttemptRepository deliveryAttemptRepository
+            DeliveryAttemptRepository deliveryAttemptRepository,
+            MeterRegistry meterRegistry
     ) {
         WebhookSender httpSender = new HttpWebhookSender(targetUrl);
-        return new PersistingWebhookSender(httpSender, deliveryAttemptRepository, targetUrl);
+        return new PersistingWebhookSender(httpSender, deliveryAttemptRepository, targetUrl, meterRegistry);
     }
 
     @Bean

@@ -1,5 +1,6 @@
 package io.notifications.webhook.config;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.notifications.webhook.adapters.in.rest.mapper.NotificationEventRestMapper;
 import io.notifications.webhook.domain.ports.in.GetNotificationEventUseCase;
 import io.notifications.webhook.domain.ports.in.QueryNotificationEventsUseCase;
@@ -16,9 +17,8 @@ import org.springframework.context.annotation.Configuration;
 
 /*
  * RestConfiguration wires inbound use cases and REST mappers.
- * It composes domain services with outbound ports while keeping the domain free of framework dependencies.
  *
- * Replay wiring includes DeliveryAttemptRepository to support minimal idempotency for replay requests.
+ * Replay use case is wrapped with an observability decorator to keep Micrometer out of the domain layer.
  */
 @Configuration
 public class RestConfiguration {
@@ -43,13 +43,16 @@ public class RestConfiguration {
             NotificationEventRepository notificationEventRepository,
             WebhookSender webhookSender,
             SubscriptionRegistry subscriptionRegistry,
-            DeliveryAttemptRepository deliveryAttemptRepository
+            DeliveryAttemptRepository deliveryAttemptRepository,
+            MeterRegistry meterRegistry
     ) {
-        return new ReplayNotificationEventService(
+        ReplayNotificationEventUseCase delegate = new ReplayNotificationEventService(
                 notificationEventRepository,
                 webhookSender,
                 subscriptionRegistry,
                 deliveryAttemptRepository
         );
+
+        return new ReplayNotificationEventUseCaseObservabilityDecorator(delegate, meterRegistry);
     }
 }
